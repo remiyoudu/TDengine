@@ -81,6 +81,13 @@ class specifyColsCompared:
         package_dir = '-'.join(package_name.split("-", 3)[0:3])
         self.exec_local_cmd(f'tar -xvf {self.install_package} && cd {package_dir} && echo -e "\n" | ./install.sh')
 
+    def dropAndCreateDb(self):
+        try:
+            self.conn.run(f'taos -s "drop database if exists {self.database}"')
+            self.conn.run(f'taos -s "create database if not exists {self.database}"')
+        except Exception as e:
+            logger.error(f"drop db failed----{e}, please check by manual")    
+    
     def uploadPkg(self):
         # upload TDengine pkg
         try:
@@ -127,7 +134,7 @@ class specifyColsCompared:
             "databases": [{
                 "dbinfo": {
                     "name": self.database,
-                    "drop": "yes",
+                    "drop": "no",
                     "update": update
                 },
                 "super_tables": [{
@@ -160,6 +167,7 @@ class specifyColsCompared:
             self.deployTDengine()
         for update in self.update_list:
             for col_count in self.column_count_list:
+                self.dropAndCreateDb()
                 for partical_col_num in [int(col_count * 0), int(col_count * 0.1), int(col_count * 0.3)]:
                     logger.info(f'update: {update} || col_count: {col_count} || partical_col_num: {partical_col_num} test')
                     self.genInsertJsonFile(self.thread_count, self.table_count, self.col_count, self.batch_size, col_count, partical_col_num, update)
